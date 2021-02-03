@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "266965943963",
+    "firebase_url": "https://babybeamapp.firebaseio.com",
+    "project_id": "babybeamapp",
+    "storage_bucket": "babybeamapp.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:266965943963:android:186e5cd7ef797727ba283e",
+        "android_client_info": {
+          "package_name": "com.example.BabyBeamApp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "266965943963-s3v86502ni862hc0nre830f22396rpps.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZbpIpn43rYssIYKcnR76MAXaoMLmVWXs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "266965943963-s3v86502ni862hc0nre830f22396rpps.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
