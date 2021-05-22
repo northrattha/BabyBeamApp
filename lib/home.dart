@@ -1,26 +1,29 @@
+import 'package:BabyBeamApp/abnormal.dart';
 import 'package:BabyBeamApp/baby_profile.dart';
-import 'package:BabyBeamApp/components/imageProfile.dart';
+import 'package:BabyBeamApp/components/sideBar.dart';
+import 'package:BabyBeamApp/development.dart';
 import 'package:BabyBeamApp/health.dart';
-import 'package:BabyBeamApp/myStyle.dart';
-import 'package:BabyBeamApp/signIn.dart';
+import 'package:BabyBeamApp/model/babyInfo.dart';
+import 'package:BabyBeamApp/model/historyDev.dart';
+import 'package:BabyBeamApp/model/historyVac.dart';
+import 'package:BabyBeamApp/model/user.dart';
 import 'package:BabyBeamApp/vaccine.dart';
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:curved_navigation_bar/curved_navigation_bar.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-
-import 'components/BottonNavBar.dart';
 import 'components/category_button.dart';
-import 'components/small_rounded_button.dart';
+import 'components/imageProfile.dart';
+import 'model/graphSympHist.dart';
+import 'model/modelVac02.dart';
+import 'myStyle.dart';
 
-class HomePage extends StatefulWidget {
+class Home extends StatefulWidget {
   @override
-  _HomePageState createState() => _HomePageState();
+  _HomeState createState() => _HomeState();
 }
 
-class _HomePageState extends State<HomePage> {
-  // Explict
+class _HomeState extends State<Home> {
+  @override
   FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
   final databaseReference = FirebaseFirestore.instance;
 
@@ -30,246 +33,197 @@ class _HomePageState extends State<HomePage> {
   String nickname = '...';
   String sex = '...';
   String birthDay = '...';
-  // var imagebaby;
+  int ageY, ageM, ageD;
   String userID;
-
+  String rangeMe;
+  var age;
+// String vacShow;
   // Method
 
   @override
   void initState() {
+    BabyInfo().readData();
     super.initState();
+    setState(() {
+      Account().getUserID();
+      userID = Account.userID;
+    });
     readData();
-    findDisplayName();
+    // getVacHistory();
   }
 
-  void updateAge(DateTime date) {
-    setState(() {});
+  Future getVacHistory() async {
+    BabyInfo.vacHist.clear();
+    FirebaseFirestore.instance
+        .collection('/baby_profile/$userID/vaccine_record')
+        .orderBy("time", descending: true)
+        .snapshots()
+        .listen((event) {
+      List<QueryDocumentSnapshot> snapshot2 = event.docs;
+      if (snapshot2.isNotEmpty) {
+        for (var snap in snapshot2) {
+          setState(() {
+            // importent
+            Map<String, dynamic> map = snap.data();
+            HistoryVac model = HistoryVac.fromMap(map);
+            setState(() {
+              BabyInfo.vacHist.add(model);
+            });
+          });
+        }
+        // print("HisList in Home : ${BabyInfo.vacHist}");
+      } else {
+        print('No History');
+      }
+    });
   }
 
-  Future<void> getUser() async {
-    FirebaseAuth firebaseAuth = FirebaseAuth.instance;
-    var user = firebaseAuth.currentUser;
-    userID = user.uid;
+  Future readDataGraph() async {
+    final QuerySnapshot result = await FirebaseFirestore.instance
+        .collection('/baby_profile/${BabyInfo.userID}/graph')
+        .get();
+
+    final List<DocumentSnapshot> documents = result.docs;
+    documents.forEach((data) {
+      // String symp = data.reference.id;
+      // int numb = data.get('num');
+      Map<String, dynamic> map = data.data();
+      GraphSympHist model = GraphSympHist.fromMap(map);
+      setState(() {
+        BabyInfo.graphSympHist.add(model);
+      });
+    });
+  }
+
+  Future getDevHistory() async {
+    BabyInfo.devHist.clear();
+    FirebaseFirestore.instance
+        .collection('/baby_profile/$userID/development_record')
+        // .orderBy("time", descending: true)
+        .snapshots()
+        .listen((event) {
+      List<QueryDocumentSnapshot> snapshot2 = event.docs;
+      if (snapshot2.isNotEmpty) {
+        for (var snap in snapshot2) {
+          setState(() {
+            // importent
+            Map<String, dynamic> map = snap.data();
+            HistoryDev model = HistoryDev.fromMap(map);
+            setState(() {
+              BabyInfo.devHist.add(model);
+            });
+          });
+        }
+      } else {
+        print('No Dev History');
+      }
+    });
   }
 
   Future<void> readData() async {
-    getUser();
-    // print('moiii22i $userID');
     DocumentSnapshot info = await FirebaseFirestore.instance
         .collection('baby_profile')
         .doc(userID)
         .get();
-    print(info.get('first_name'));
     setState(() {
+      ageY = info.get('ageY');
+      ageM = info.get('ageM');
+      ageD = info.get('ageD');
       firstname = info.get('first_name');
       lastname = info.get('last_name');
       nickname = info.get('nickname');
       sex = info.get('sex');
       birthDay = info.get('birthDate');
-      // imagebaby = info.get('imagebaby');
+      age = double.parse("$ageY.$ageM");
     });
   }
 
-  Future<void> findDisplayName() async {
-    FirebaseAuth firebaseAuth = FirebaseAuth.instance;
-    var user = firebaseAuth.currentUser;
-    setState(() {
-      login = user.displayName;
-    });
+  String getAge() {
+    String year = "";
+    String month = "";
+    String day = "";
+    if (ageY != 0 || ageM != 0 || ageD != 0) {
+      if (ageY != 0) {
+        year = "${ageY} ปี";
+      }
+      if (ageM != 0) {
+        month = " ${ageM} เดือน";
+      }
+      if (ageD != 0) {
+        day = " ${ageD} วัน";
+      }
+      return "$year$month$day";
+    } else
+      return "แรกเกิด";
   }
 
-  Future<void> readAllData() async {
-    // ดึงข้อมูลจาก firestore
-    // FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
-    CollectionReference collectionReference =
-        firebaseFirestore.collection('baby_profile'); // in DB
-    await collectionReference.snapshots().listen((response) {
-      List<DocumentSnapshot> snapshots = response.docs;
-      for (var snapshot in snapshots) {
-        print('object = $snapshot');
-        print('Name = ${snapshot.get('first_name')}'); // in DB
+  findRangeDev() async {
+    age = double.parse("${ageY}.${ageM}");
+    print('Age $age');
+
+    FirebaseFirestore.instance
+        .collection('/development')
+        .snapshots()
+        .listen((event) {
+      List<QueryDocumentSnapshot> snapshot = event.docs;
+      if (snapshot.isNotEmpty) {
+        for (var snap in snapshot) {
+          Map<String, dynamic> map = snap.data();
+          ModelVac02 model = ModelVac02.fromMap(map);
+          var parts = model.s.split('.');
+          String yStart = parts[0];
+          String mStart = parts[1];
+          var parte = model.e.split('.');
+          String yEnd = parte[0];
+          String mEnd = parte[1];
+          print('xddd : ${model.s} - ${model.e}');
+          if ((ageY == 0 && ageM == 10) ||
+              (ageY == 0 && ageM == 11) ||
+              (ageY == 1 && ageM == 0)) {
+            print('Found Age Range 0.10-1.0');
+            BabyInfo.devRange = "0.10-1.0";
+            setState(() {});
+          }
+          if (mEnd.length == 2 || mStart.length == 2 || ageM >= 9) {
+            if (ageY.clamp(double.parse(yStart), double.parse(yEnd)) == ageY &&
+                double.parse(mStart) <= ageM) {
+              rangeMe = "${model.s}-${model.e}";
+              print('Found Age Range len2');
+              BabyInfo.devRange = rangeMe;
+              setState(() {});
+            }
+          } else if (age.clamp(double.parse(model.s), double.parse(model.e)) ==
+              age) {
+            rangeMe = "${model.s}-${model.e}";
+            print('Found Age Range');
+            BabyInfo.devRange = rangeMe;
+            setState(() {});
+          }
+        }
       }
     });
   }
 
-  Future<void> ShowName() async {
-    FirebaseAuth firebaseAuth = FirebaseAuth.instance;
-    var user = firebaseAuth.currentUser;
-    setState(() {
-      // name = user.;
+  findRangeVac() async {
+    age = double.parse("${ageY}.${ageM}");
+    print('Age $age');
+
+    FirebaseFirestore.instance.collection('/vac02').snapshots().listen((event) {
+      List<QueryDocumentSnapshot> snapshot = event.docs;
+      if (snapshot.isNotEmpty) {
+        for (var snap in snapshot) {
+          Map<String, dynamic> map = snap.data();
+          ModelVac02 model = ModelVac02.fromMap(map);
+          if (age.clamp(double.parse(model.s), double.parse(model.e)) == age) {
+            rangeMe = "${model.s}-${model.e}";
+            print('Found Age Range');
+            BabyInfo.ageRange = rangeMe;
+            setState(() {});
+          }
+        }
+        print('Year Range : $rangeMe');
+      }
     });
-  }
-
-  // Widget signOut() {
-  //   return IconButton(
-  //       icon: Icon(Icons.exit_to_app),
-  //       tooltip: 'Sign Out',
-  //       onPressed: () {
-  //         SignOutAleart();
-  //       });
-  // }
-
-  // Widget SignOutAleart() {
-  //   showDialog(
-  //       context: context,
-  //       builder: (BuildContext context) {
-  //         return AlertDialog(
-  //           title: Text('ออกจากระบบ ?'),
-  //           content: Text('คุณต้องการออกจากระบบใช่ไหม'),
-  //           actions: <Widget>[cancleButton(), okButton()],
-  //         );
-  //       });
-  // }
-
-  // Widget okButton() {
-  //   return FlatButton(
-  //       onPressed: () {
-  //         Navigator.of(context).pop();
-  //         processSignOut();
-  //       },
-  //       child: Text('OK'));
-  // }
-
-  // Future<void> processSignOut() async {
-  //   FirebaseAuth firebaseAuth = FirebaseAuth.instance;
-  //   await firebaseAuth.signOut().then((response) {
-  //     MaterialPageRoute materialPageRoute =
-  //         MaterialPageRoute(builder: (BuildContext context) => SignIn());
-  //     Navigator.of(context).pushAndRemoveUntil(
-  //         materialPageRoute, (Route<dynamic> route) => false);
-  //   });
-  // }
-
-  // Widget cancleButton() {
-  //   return FlatButton(
-  //       onPressed: () {
-  //         Navigator.of(context).pop();
-  //       },
-  //       child: Text('Cancel'));
-  // }
-
-  Widget modalFormTop(context) {
-    return OutlineButton(
-        // color: greenbeam,
-        child: Text(
-          nickname,
-          style: TextStyle(color: white, fontSize: 20),
-        ),
-        onPressed: () {
-          return showGeneralDialog(
-            context: context,
-            barrierDismissible: true, //กดบริเวณอื่นให้ออก
-            transitionDuration: Duration(milliseconds: 400), //ความเร็ว
-            barrierLabel: MaterialLocalizations.of(context).dialogLabel,
-            // barrierColor: Colors.black.withOpacity(0.5),
-            pageBuilder: (context, _, __) {
-              return Material(
-                type: MaterialType.transparency,
-                child: Container(
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(50),
-                        height: 450,
-                        width: 500,
-                        decoration: BoxDecoration(
-                          color: greenbeam,
-                          borderRadius: BorderRadius.only(
-                              bottomLeft: Radius.circular(40),
-                              bottomRight: Radius.circular(40)),
-                        ),
-                        child: Column(
-                          children: [
-                            OutlineButton(
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              },
-                              child: Text(
-                                nickname,
-                                style: TextStyle(color: white, fontSize: 20),
-                              ),
-                            ),
-                            const SizedBox(
-                              height: 20,
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                groupImage(90.0),
-                                const SizedBox(
-                                  width: 20,
-                                ),
-                                Mystyle().TextButtonModal(nickname),
-                              ],
-                            ),
-                            line(1.0),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                groupImage(90.0),
-                                const SizedBox(
-                                  width: 20,
-                                ),
-                                Mystyle().TextButtonModal('หนูแดง')
-                              ],
-                            ),
-                            line(1.0),
-                            const SizedBox(
-                              height: 20,
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.add,
-                                  color: white,
-                                  size: 30,
-                                ),
-                                const SizedBox(
-                                  width: 20,
-                                ),
-                                Mystyle().TextButtonModal('เพิ่มลูกของคุณ')
-                              ],
-                            )
-                          ],
-                        ),
-                      )
-                    ],
-                  ),
-                ),
-              );
-            },
-            transitionBuilder: (context, animation, secondaryAnimation, child) {
-              return SlideTransition(
-                position: CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeOut,
-                ).drive(Tween<Offset>(
-                  begin: Offset(0, -1.0),
-                  end: Offset.zero,
-                )),
-                child: child,
-              );
-            },
-          );
-        });
-  }
-
-  _showModalBottom(context) {
-    showModalBottomSheet(
-        context: context,
-        builder: (BuildContext context) {
-          return Container(
-            // alignment: Alignment.topCenter,
-            padding: EdgeInsets.all(500),
-            height: 300,
-            decoration: BoxDecoration(
-                color: white,
-                borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20))),
-          );
-        });
   }
 
   Widget headerbar(context) {
@@ -278,7 +232,7 @@ class _HomePageState extends State<HomePage> {
       padding: EdgeInsets.all(30),
       child: Column(
         children: [
-          modalFormTop(context),
+          // modalFormTop(context),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -311,7 +265,8 @@ class _HomePageState extends State<HomePage> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('$firstname $lastname', style: TextStyle(fontSize: 16)),
+                  Text('${firstname} ${lastname}',
+                      style: TextStyle(fontSize: 16)),
                   SizedBox(
                     height: 4,
                   ),
@@ -320,10 +275,8 @@ class _HomePageState extends State<HomePage> {
                     height: 4,
                   ),
                   Text(sex, style: TextStyle(fontSize: 16)),
-                  // Text('A', style: TextStyle(fontSize: 16))
                 ],
               ),
-              // Icon(Icons.settings)
             ],
           ),
           Row(
@@ -389,88 +342,160 @@ class _HomePageState extends State<HomePage> {
         ],
       );
 
+  Widget headProfile() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        ImageProfile(
+          size: 50.0,
+          color: white,
+        ),
+        SizedBox(
+          width: 20,
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            txtSmallHeader('${firstname} ${lastname}', greyDark),
+            SizedBox(
+              height: 5,
+            ),
+            Text(
+              getAge(),
+              style: TextStyle(color: greyDark, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  Widget headBar() {
+    return SafeArea(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            margin: EdgeInsets.all(10),
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+                shape: BoxShape.circle, color: blue_Grey.withOpacity(0.7)),
+            child: IconButton(
+                icon: Icon(
+                  Icons.more_vert,
+                  color: white,
+                ),
+                onPressed: () {
+                  _scaffoldKey.currentState.openDrawer();
+                }),
+          ),
+          txtSmallHeader(nickname, greyLight),
+          Container(
+            margin: EdgeInsets.all(10),
+            width: 50,
+            height: 50,
+            // color: greenbeam,
+            decoration: BoxDecoration(
+                shape: BoxShape.circle, color: blue_Grey.withOpacity(0.7)),
+            child: IconButton(
+                icon: Icon(
+                  Icons.edit_rounded,
+                  color: white,
+                ),
+                onPressed: () {
+                  readDataGraph();
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => BabyProfile()));
+                }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget section(String title) {
+    return Padding(
+        padding: EdgeInsets.fromLTRB(16, 20, 16, 8),
+        child: Text(
+          title,
+          style: Theme.of(context).textTheme.caption,
+        ));
+  }
+
+  // Widget carousel() {
+  //   return Container(
+  //     child: CarouselSlider(
+  //       options: CarouselOptions(
+  //         height: size.height * 0.10,
+  //         autoPlay: true,
+  //         autoPlayInterval: Duration(seconds: 5),
+  //         enlargeCenterPage: true,
+  //         viewportFraction: 1.0,
+  //         reverse: true,
+  //         scrollDirection: Axis.vertical,
+  //       ),
+  //       items: [1, 2, 3].map((i) {
+  //         return Builder(
+  //           builder: (BuildContext context) {
+  //             return Container(
+  //                 width: MediaQuery.of(context).size.width,
+  //                 margin: EdgeInsets.symmetric(horizontal: 5.0),
+  //                 decoration: BoxDecoration(
+  //                     color: white,
+  //                     borderRadius: BorderRadius.circular(5)),
+  //                 child: Center(
+  //                   child: Text(
+  //                     'text $i',
+  //                     style: TextStyle(fontSize: 16.0),
+  //                   ),
+  //                 ));
+  //           },
+  //         );
+  //       }).toList(),
+  //     ),
+  //   );
+  // }
+
+  Size size;
   @override
   Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
+    size = MediaQuery.of(context).size;
+
     return Scaffold(
-      // backgroundColor: greenBackGroundColor,
-      bottomNavigationBar: BottonNavBar(
-        titleBottomNavBar: 'Home',
-        context: context,
-      ),
+      key: _scaffoldKey,
       body: Stack(
         children: <Widget>[
           Container(
-            height: size.height * .45,
+            height: 250,
+            width: double.infinity,
             decoration: BoxDecoration(
-              color: purpleBackGroundColor,
-              image: DecorationImage(
-                alignment: Alignment.centerLeft,
-                image: AssetImage('images/cloud.png'),
-              ),
+              borderRadius: BorderRadius.only(
+                  bottomRight: Radius.circular(35),
+                  bottomLeft: Radius.circular(35)),
+              color: greyBackground,
+            ),
+            child: Column(
+              children: [
+                headBar(),
+                headProfile(),
+                SizedBox(
+                  height: 10,
+                )
+              ],
             ),
           ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+              padding: const EdgeInsets.only(
+                  top: 150, left: 25, right: 25, bottom: 25),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Text(
-                          nickname,
-                          style: TextStyle(
-                            fontFamily: 'Bold',
-                            fontSize: 36,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.topRight,
-                          child: Container(
-                            alignment: Alignment.center,
-                            height: 100,
-                            width: 100,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.5),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Container(
-                              alignment: Alignment.center,
-                              height: 80,
-                              width: 80,
-                              decoration: BoxDecoration(
-                                  image: DecorationImage(
-                                image: AssetImage('images/user128.png'),
-                              )
-                                  //           image: DecorationImage(
-                                  // image: AssetImage('images/user128.png'),
-                                  ),
-                              // child: Icon(Icons.person_rounded),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SmallRoundedButton(
-                    text: 'ดูข้อมูลส่วนตัว',
-                    icon: Icons.navigate_next_rounded,
-                    press: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) {
-                            return Baby_profile();
-                          },
-                        ),
-                      );
-                    },
-                  ),
-                  SizedBox(height: size.width * 0.15),
+                  SizedBox(height: size.width * 0.1),
+                  SizedBox(height: size.width * 0.05),
                   Expanded(
                     child: GridView.count(
                       crossAxisCount: 2,
@@ -486,7 +511,7 @@ class _HomePageState extends State<HomePage> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) {
-                                  return HealthPage();
+                                  return Health();
                                 },
                               ),
                             );
@@ -495,17 +520,36 @@ class _HomePageState extends State<HomePage> {
                         CategoryButton(
                           title: 'พัฒนาการ',
                           svgSrc: 'images/development.svg',
-                          press: () {},
+                          press: () {
+                            findRangeDev();
+                            getDevHistory();
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => Development()));
+                          },
                         ),
                         CategoryButton(
                           title: 'อาการป่วย',
                           svgSrc: 'images/medical.svg',
-                          press: () {},
+                          press: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) {
+                                  return Abnormal();
+                                },
+                              ),
+                            );
+                          },
                         ),
                         CategoryButton(
                           title: 'วัคซีน',
                           svgSrc: 'images/vaccine.svg',
                           press: () {
+                            // BabyInfo.vacHist.clear();
+                            findRangeVac();
+                            // getVacHistory();
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -519,23 +563,14 @@ class _HomePageState extends State<HomePage> {
                       ],
                     ),
                   ),
-                  // signOut(),
                 ],
               ),
             ),
+            // signOut(),
           ),
-          // signOut(),
         ],
-        // SignOut
-        // FlatButton(
-        //   onPressed: () {
-        //     auth.signOut();
-        //     Navigator.of(context).pushReplacement(
-        //         MaterialPageRoute(builder: (context) => SignIn()));
-        //   },
-        //   child: Text('ออกจากระบบ'),
-        // ),
       ),
+      drawer: SideBar(),
     );
   }
 }

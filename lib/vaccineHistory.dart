@@ -1,13 +1,15 @@
-import 'package:BabyBeamApp/components/BackButtonBeam.dart';
 import 'package:BabyBeamApp/components/imageProfile.dart';
+import 'package:BabyBeamApp/components/modalHistory.dart';
+import 'package:BabyBeamApp/model/babyInfo.dart';
+import 'package:BabyBeamApp/model/historyVac.dart';
+import 'package:BabyBeamApp/vaccine.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:BabyBeamApp/myStyle.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:timeline_tile/timeline_tile.dart';
-// import 'package:timelines/timelines.dart';
-
-import 'components/BottonNavBar.dart';
 import 'myStyle.dart';
 
 class VaccinHistory extends StatefulWidget {
@@ -17,175 +19,220 @@ class VaccinHistory extends StatefulWidget {
 
 class _VaccinHistoryState extends State<VaccinHistory> {
   String userID;
-  int ageY, ageM, ageD;
-  String nickname = '...';
-  String firstname = '...';
-  String lastname = '...';
+  List<HistoryVac> history = new List();
+  Set<HistoryVac> mySet = new Set();
+  Color primary = bage;
+  Size size;
 
   @override
   void initState() {
     super.initState();
+    if (BabyInfo.vacHist != null) {
+      mySet = BabyInfo.vacHist.toSet();
+      history = mySet.toList();
+    } else
+      history = null;
     readData();
   }
 
-  Future<void> readData() async {
-    getUser();
-    DocumentSnapshot info = await FirebaseFirestore.instance
-        .collection('baby_profile')
-        .doc(userID)
-        .get();
-    setState(() {
-      ageY = info.get('ageY');
-      ageM = info.get('ageM');
-      ageD = info.get('ageD');
-      nickname = info.get('nickname');
-      firstname = info.get('first_name');
-      lastname = info.get('last_name');
+  getHistory() async {
+    if (BabyInfo.histID != null && BabyInfo.vacHist != null) {
+      BabyInfo.histID.clear();
+      BabyInfo.vacHist.clear();
+    }
+    FirebaseFirestore.instance
+        .collection('/baby_profile/$userID/vaccine_record')
+        .orderBy("time", descending: true)
+        .snapshots()
+        .listen((event) {
+      List<QueryDocumentSnapshot> snapshot2 = event.docs;
+      if (snapshot2.isNotEmpty) {
+        for (var snap in snapshot2) {
+          setState(() {
+            // importent
+            Map<String, dynamic> map = snap.data();
+            // HistoryVac model = HistoryVac.fromMap(map);
+            setState(() {
+              BabyInfo.histID.add(snap["id"]);
+            });
+          });
+        }
+        print("HisList in Hist : ${BabyInfo.histID.toSet()}");
+      } else {
+        print('No History');
+      }
     });
   }
 
   Future<void> getUser() async {
     FirebaseAuth firebaseAuth = FirebaseAuth.instance;
     var user = firebaseAuth.currentUser;
-    ;
     userID = user.uid;
   }
 
-  Widget headBar() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        BackButtonBeam(
-          background: blue_Grey,
-          color: Colors.black,
-        ),
-        SafeArea(
-          child: txtSmallHeader('Vaccine History', greyLight),
-        ),
-        SafeArea(
-          child: Container(
-            margin: EdgeInsets.all(10),
-            width: 50,
-            height: 50,
-            // color: greenbeam,
-            decoration: BoxDecoration(
-                shape: BoxShape.circle, color: blue_Grey.withOpacity(0.7)),
-            child: IconButton(
-                icon: Icon(
-                  Icons.edit,
-                  color: white,
-                ),
-                onPressed: () {
-                  Navigator.pop(context);
-                }),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget headProfile() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        ImageProfile(
-          size: 50.0,
-        ),
-        SizedBox(
-          width: 20,
-        ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            txtSmallHeader('$firstname $lastname', greyDark),
-            // Text(
-            //   'อายุ : $ageY ปี $ageM เดือน $ageD วัน',
-            //   style: TextStyle(color: greyDark, fontWeight: FontWeight.w600),
-            // ),
-            (ageY == 0 && ageM == 0 && ageD == 0)
-                    ? Text('แรกเกิด',style: TextStyle(color: greyDark, fontWeight: FontWeight.w600),)
-                    : Text('${ageY} ปี ${ageM} เดือน',style: TextStyle(color: greyDark, fontWeight: FontWeight.w600),),
-          ],
-        ),
-      ],
-    );
+  Future<Null> readData() async {
+    getUser();
+    await Firebase.initializeApp().then((value) async {
+      print('initialize success');
+      FirebaseFirestore.instance
+          .collection('/baby_profile/$userID/vaccine_record')
+          .orderBy("time", descending: true)
+          .snapshots()
+          .listen((event) {
+        List<QueryDocumentSnapshot> snapshot = event.docs;
+        if (snapshot.isNotEmpty) {
+          // print('have');
+        } else {
+          print('No');
+        }
+      });
+    });
   }
 
   double dotsize = 30;
-  Widget buildList() {
-    return ListView.builder(
-      // itemCount: items.length,
-      itemCount: 10,
-      itemBuilder: (context, index) {
-        Color color = bluebeam01;
-        if (index % 2 == 0) {
-          dotsize = 30;
-          // color = redbeam.withOpacity(0.5);
-        }
-        if (index % 3 == 0) {
-          dotsize = 20;
-          // color = yellowPastel.withOpacity(0.4);
-        }
-        if (index == 0) {
-          return SizedBox(
-            child: TimelineTile(
-              alignment: TimelineAlign.start,
-              endChild: timelineBox(color),
-              isFirst: true,
-              beforeLineStyle: const LineStyle(thickness: 3),
-              indicatorStyle: IndicatorStyle(
-                  width: 30,
-                  height: 30,
-                  indicator: indicatorNew(30),
-                  indicatorXY: 0.30,
-                  padding: EdgeInsets.only(right: 10),
-                  color: purpleButtonColor),
-            ),
-          );
-        }
-        if (index == 9) {
-          return SizedBox(
-            child: TimelineTile(
-              alignment: TimelineAlign.start,
-              // endChild: timelineBox(),
-              endChild: timelineBox(color),
-              isLast: true,
-              beforeLineStyle: const LineStyle(thickness: 3),
-              indicatorStyle: IndicatorStyle(
-                  width: 30,
-                  height: 30,
-                  indicator: indicatorNew(20),
-                  indicatorXY: 0.30,
-                  padding: EdgeInsets.only(right: 10),
-                  color: purple),
-            ),
-          );
-        }
-        return SizedBox(
-          child: TimelineTile(
-            alignment: TimelineAlign.start,
-            endChild: timelineBox(color),
-            // child: timelineBox(),
-            beforeLineStyle: const LineStyle(
-              thickness: 3,
-            ),
-            indicatorStyle: IndicatorStyle(
+  Widget checkIndex(Color color, int index, HistoryVac hist) {
+    if (history.length == 1) {
+      print('hrer');
+      return SizedBox(
+        child: TimelineTile(
+          alignment: TimelineAlign.start,
+          endChild: timelineBox(color, hist),
+          isFirst: true,
+          isLast: true,
+          // beforeLineStyle: const LineStyle(thickness: 3),
+          indicatorStyle: IndicatorStyle(
               width: 30,
               height: 30,
+              indicator: indicatorNew(20, hist.key), //30
               indicatorXY: 0.30,
-              indicator: indicatorNew(dotsize),
               padding: EdgeInsets.only(right: 10),
-              // color: index % 2 == 0 ? redbeam : purple,
-            ),
-          ),
-        );
-      },
+              color: primary),
+        ),
+      );
+    }
+
+    if (index == 0) {
+      return SizedBox(
+        child: TimelineTile(
+          alignment: TimelineAlign.start,
+          endChild: timelineBox(color, hist),
+          isFirst: true,
+          beforeLineStyle: const LineStyle(thickness: 3),
+          indicatorStyle: IndicatorStyle(
+              width: 30,
+              height: 30,
+              indicator: indicatorNew(20, hist.key), //30
+              indicatorXY: 0.30,
+              padding: EdgeInsets.only(right: 10),
+              color: primary),
+        ),
+      );
+    }
+    if (index == (history.length - 1)) {
+      return SizedBox(
+        child: TimelineTile(
+          alignment: TimelineAlign.start,
+          endChild: timelineBox(color, hist),
+          isLast: true,
+          beforeLineStyle: const LineStyle(thickness: 3),
+          indicatorStyle: IndicatorStyle(
+              width: 30,
+              height: 30,
+              indicator: indicatorNew(20, hist.key),
+              indicatorXY: 0.30,
+              padding: EdgeInsets.only(right: 10),
+              color: purple),
+        ),
+      );
+    }
+    return SizedBox(
+      child: TimelineTile(
+        alignment: TimelineAlign.start,
+        endChild: timelineBox(color, hist),
+        beforeLineStyle: const LineStyle(
+          thickness: 3,
+        ),
+        indicatorStyle: IndicatorStyle(
+          width: 30,
+          height: 30,
+          indicatorXY: 0.30,
+          indicator: indicatorNew(20, hist.key), //30
+          padding: EdgeInsets.only(right: 10),
+          // color: index % 2 == 0 ? redbeam : purple,
+        ),
+      ),
     );
   }
 
-  Widget indicatorNew(double dotsize) {
-    // return Container(width: 60,height: 100,color: Colors.black,);
+  Widget timelineBox(color, HistoryVac hist) {
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: () {
+            showGeneralDialog(
+              // barrierDismissible: true, //กดบริเวณอื่นให้ออก
+              context: context,
+              pageBuilder: (context, _, __) {
+                return ModalHistory(
+                  colorbuttom: white,
+                  colormodal: grayBackGroundColor,
+                  histList: hist,
+                );
+              },
+              transitionBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                return SlideTransition(
+                  position: CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOut,
+                  ).drive(Tween<Offset>(
+                    begin: Offset(0, -1.0),
+                    end: Offset.zero,
+                  )),
+                  child: child,
+                );
+              },
+            );
+          },
+          child: new Container(
+            margin: EdgeInsets.only(bottom: 25),
+            padding: EdgeInsets.all(15),
+            decoration: BoxDecoration(
+                borderRadius: BorderRadius.only(
+                    bottomRight: Radius.circular(25),
+                    bottomLeft: Radius.circular(25),
+                    topRight: Radius.circular(25)),
+                color: grayBackGroundColor),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    txtSmallHeader(hist.key, greyDark),
+                    Text(
+                      hist.day,
+                      style: TextStyle(color: redBurgandy),
+                    )
+                  ],
+                ),
+                Divider(
+                  color: Colors.black,
+                ),
+                SizedBox(
+                  height: 10,
+                ),
+                Text(hist.name),
+              ],
+            ),
+          ),
+        )
+      ],
+    );
+  }
+
+  Widget indicatorNew(double dotsize, String key) {
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -201,113 +248,141 @@ class _VaccinHistoryState extends State<VaccinHistory> {
         Container(
           width: 20,
           decoration: BoxDecoration(
-            color: yellowPastel,
             shape: BoxShape.circle,
+            // color: yellowPastel,
+            color: key != "วัคซีนเสริม" ? redBurgandy : orangeButtonColor2,
           ),
         ),
       ],
     );
   }
 
-  Widget timeLineVaccine() {
+  Widget timeLineDev() {
     return Container(
       width: 360,
       padding: EdgeInsets.only(left: 30),
-      child: Flexible(child: buildList()),
+      child: ListView.builder(
+        itemCount: history.length,
+        itemBuilder: (context, index) {
+          final history0 = history;
+          Color color = bluebeam01;
+          String id = history0[index].id;
+          return Container(
+            child: Slidable(
+              actionPane: SlidableDrawerActionPane(),
+              actionExtentRatio: 0.2,
+              child: SizedBox(
+                child: checkIndex(color, index, history[index]),
+              ),
+              secondaryActions: <Widget>[
+                Container(
+                  width: 50,
+                  height: 50,
+                  margin: EdgeInsets.only(bottom: 25),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: redbeam,
+                  ),
+                  child: IconSlideAction(
+                    color: Colors.transparent,
+                    icon: Icons.delete,
+                    onTap: () {
+                      history.removeAt(index);
+                      FirebaseFirestore.instance
+                          .collection("/baby_profile/$userID/vaccine_record")
+                          .where("id", isEqualTo: id)
+                          .get()
+                          .then((snapshot) {
+                        BabyInfo.histID.removeAt(index);
+                        snapshot.docs.first.reference.delete().then((value) {
+                          print("Remove Success");
+                          setState(() {
+                            getHistory();
+                          });
+                        });
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
-  Widget timelineBox(color) {
-    return Column(
-      children: [
-        SizedBox(
-          height: 25,
-        ),
-        Container(
-          padding: EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            // color: bluebeam01
-            borderRadius: BorderRadius.only(
-                bottomRight: Radius.circular(25),
-                bottomLeft: Radius.circular(25),
-                topRight: Radius.circular(25)),
-            color: color,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget headbar() {
+    return Container(
+      padding: EdgeInsets.all(10),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  txtSmallHeader('HB1', greyDark),
-                  Text(
-                    '20/02/0202',
-                    style: TextStyle(color: Colors.black),
-                  )
-                ],
+              IconButton(
+                icon: Icon(
+                  Icons.arrow_back_ios_rounded,
+                  color: white,
+                ),
+                onPressed: () {
+                  if (BabyInfo.vacHist != null) {
+                    BabyInfo.vacHist.clear();
+                  }
+                  // Navigator.pop(context);
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => Vaccine()));
+                },
               ),
-              Text('วัตซีนป้องกันโรคคคค')
+              Text(
+                'ประวัติการรับวัคซีน',
+                style: TextStyle(fontSize: 20),
+              ),
+              ImageProfile(
+                size: 5,
+                color: white,
+              )
             ],
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+
+  Widget noData() {
+    return Container(
+      height: size.height * 0.8,
+      alignment: Alignment.center,
+      child: Text(
+        'ไม่พบประวัติ',
+        style: TextStyle(color: greyDark.withOpacity(0.3), fontSize: 15),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      // body: Column(children: [
-      //   Flexible(child: Container(child: timeLineVaccine(),))
-      // ],),
+    size = MediaQuery.of(context).size;
+    return new Scaffold(
+      backgroundColor: white,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: double.infinity,
-            // height: 220,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.only(
                   bottomRight: Radius.circular(35),
                   bottomLeft: Radius.circular(35)),
-              color: greyBackground,
+              color: primary,
             ),
-            child: Column(
-              children: [
-                headBar(),
-                headProfile(),
-                SizedBox(
-                  height: 10,
-                )
-                // timeLine(),
-              ],
+            child: SafeArea(
+              child: headbar(),
             ),
           ),
-          Flexible(
-            child: timeLineVaccine(),
-          )
-          // Flexible(
-          //   child: TimelineTile(
-          //     axis: TimelineAxis.horizontal,
-          //     alignment: TimelineAlign.start,
-          //     lineXY: 0.3,
-          //     endChild: Container(
-          //       constraints: const BoxConstraints(
-          //         minWidth: 120,
-          //       ),
-          //       color: Colors.lightGreenAccent,
-          //     ),
-          //     startChild: Container(
-          //       color: Colors.amberAccent,
-          //     ),
-          //   ),
-          // ),
+         BabyInfo.vacHist != null ? Flexible(child: timeLineDev()) : noData(),
         ],
-      ),
-      bottomNavigationBar: BottonNavBar(
-        titleBottomNavBar: 'Home',
       ),
     );
   }

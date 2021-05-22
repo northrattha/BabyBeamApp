@@ -13,18 +13,6 @@ class BottonNavBar extends StatelessWidget {
     this.titleBottomNavBar,
   }) : super(key: key);
 
-  Widget SignOutAleart() {
-    showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('ออกจากระบบ ?'),
-            content: Text('คุณต้องการออกจากระบบใช่ไหม'),
-            actions: <Widget>[cancleButton(), okButton()],
-          );
-        });
-  }
-
   Widget okButton() {
     return FlatButton(
         onPressed: () {
@@ -86,11 +74,6 @@ class BottonNavBar extends StatelessWidget {
               isActive: titleBottomNavBar == 'Home' ? true : false,
             ),
           ),
-          // BottomNavItem(
-          //   title: 'แจ้งเตือน',
-          //   icon: Icons.calendar_today_outlined,
-          //   isActive: titleBottomNavBar == 'Calender' ? true : false,
-          // ),
           Container(
             // color: greenDark,
             width: size.width * 0.29,
@@ -99,7 +82,7 @@ class BottonNavBar extends StatelessWidget {
               icon: Icons.dehaze_outlined,
               isActive: titleBottomNavBar == 'Menu' ? true : false,
               press: () {
-                SignOutAleart();
+                // SignOutAleart();
               },
             ),
           ),

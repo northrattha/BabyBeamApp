@@ -1,7 +1,4 @@
-// import 'package:BabyBeamApp/home.dart';
-import 'package:BabyBeamApp/baby_profile.dart';
 import 'package:BabyBeamApp/home.dart';
-import 'package:BabyBeamApp/home2.dart';
 import 'package:BabyBeamApp/myStyle.dart';
 import 'package:BabyBeamApp/signIn.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -15,7 +12,7 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  var _primary = greenbeam;
+  // var _primary = greenbeam;
 
   @override
   Widget build(BuildContext context) {
@@ -23,23 +20,19 @@ class MyApp extends StatelessWidget {
     Widget firstWidget;
 
     if (firebaseUser != null) {
-      firstWidget = HomePage();
+      firstWidget = Home();
     } else {
       firstWidget = SignIn();
     }
 
     return MaterialApp(
-      // home: firstWidget,
       debugShowCheckedModeBanner: false,
-      home: Home(),
+      home: firstWidget,
       title: 'MyApp',
       theme: ThemeData(
         fontFamily: 'Medium',
-        primaryColor: _primary,
         accentColor: white,
-        // scaffoldBackgroundColor: Colors.white,
         scaffoldBackgroundColor: grayBackGroundColor,
-        canvasColor: Colors.transparent,
       ),
     );
   }

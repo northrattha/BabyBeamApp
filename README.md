@@ -1,5 +1,15 @@
 # BabyBeamApp
 
+- Clone project BabyBeamApplication.
+- Open project.
+- Some package will missing so click “Get package”.
+- Delete file “pubspec.lock”.
+- Save  file “pubspec.yaml”.
+- Open emulator (Google Pixel 3a Emulator).
+- Open terminal and run “Flutter run”. 
+
+---- The presentation slide is in the folder “document”. ----
+
 A new Flutter project.
 
 ## Getting Started

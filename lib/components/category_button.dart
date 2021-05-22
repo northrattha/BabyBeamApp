@@ -41,13 +41,41 @@ class CategoryButton extends StatelessWidget {
                   Spacer(),
                   SvgPicture.asset(svgSrc),
                   Spacer(),
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: 'Bold',
-                      fontSize: 16,
-                    ),
+                  // Text(
+                  //   title,
+                  //   textAlign: TextAlign.center,
+                  //   style: TextStyle(
+                  //     fontFamily: 'Bold',
+                  //     fontSize: 16,
+                  //   ),
+                  // ),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        flex: 4,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            child: Text(
+                              title,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: 'Bold',
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: Container(
+                            child: Icon(Icons.navigate_next_rounded),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

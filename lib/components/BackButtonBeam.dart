@@ -1,4 +1,3 @@
-import 'package:BabyBeamApp/myStyle.dart';
 import 'package:flutter/material.dart';
 
 class BackButtonBeam extends StatelessWidget {
@@ -7,13 +6,11 @@ class BackButtonBeam extends StatelessWidget {
   const BackButtonBeam({color, this.background});
   @override
   Widget build(BuildContext context) {
-    // return Text('data');
     return SafeArea(
       child: Container(
         margin: EdgeInsets.all(10),
         width: 50,
         height: 50,
-        // color: greenbeam,
         decoration: BoxDecoration(
             shape: BoxShape.circle, color: background.withOpacity(0.7)),
         child: IconButton(

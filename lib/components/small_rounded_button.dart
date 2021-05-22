@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 class SmallRoundedButton extends StatelessWidget {
   final String text;
+  final String font;
+  final Color color, textColor;
   final IconData icon;
   final Function press;
   const SmallRoundedButton({
@@ -9,13 +11,16 @@ class SmallRoundedButton extends StatelessWidget {
     this.press,
     this.text,
     this.icon,
+    this.font = 'Bold',
+    this.color = Colors.white,
+    this.textColor,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return FlatButton(
       shape: StadiumBorder(),
-      color: Colors.white,
+      color: color,
       onPressed: press,
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -23,11 +28,12 @@ class SmallRoundedButton extends StatelessWidget {
           Text(
             text,
             style: TextStyle(
-              fontFamily: 'Bold',
+              color: textColor,
+              fontFamily: font,
               fontSize: 16,
             ),
           ),
-          Icon(icon),
+          if (icon != null) Icon(icon),
         ],
       ),
     );

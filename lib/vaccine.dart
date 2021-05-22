@@ -1,16 +1,16 @@
+import 'package:BabyBeamApp/components/modalAddVaccine.dart';
+import 'package:BabyBeamApp/components/modaladdOtherVacc.dart';
+import 'package:BabyBeamApp/components/sideBar.dart';
 import 'package:BabyBeamApp/home.dart';
+import 'package:BabyBeamApp/model/babyInfo.dart';
+import 'package:BabyBeamApp/model/historyVac.dart';
+import 'package:BabyBeamApp/model/vaccineList.dart';
 import 'package:BabyBeamApp/myStyle.dart';
 import 'package:BabyBeamApp/components/imageProfile.dart';
 import 'package:BabyBeamApp/vaccineHistory.dart';
-import 'package:age/age.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:curved_navigation_bar/curved_navigation_bar.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'components/BackButtonBeam.dart';
-// import 'unility/DB.dart';
-import 'components/BottonNavBar.dart';
+import 'model/user.dart';
 
 class Vaccine extends StatefulWidget {
   @override
@@ -18,119 +18,123 @@ class Vaccine extends StatefulWidget {
 }
 
 class _VaccineState extends State<Vaccine> {
-  FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final databaseReference = FirebaseFirestore.instance;
-  String nickname = '...';
+  FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
+  List<VaccineList> vacList = new List();
   String userID;
   String birthDate = '...';
-  int ageY, ageM, ageD;
+  int ageD;
   DateTime date;
   List<String> vaccineForAge;
   String key = '...';
+  String tests = '...';
+  List<HistoryVac> hisvac = new List();
+  // Color primary = redBurgandy;
+  Color primaryButton = grayShadowColor;
+  Color primary = grayBackGroundColor;
 
-  CollectionReference vaccine =
-      FirebaseFirestore.instance.collection("Vaccine");
+
 
   @override
   void initState() {
     super.initState();
     readData();
+    getHistory();
+       
   }
 
-  Widget vaccineList() {
-    // var oo = FirebaseFirestore.instance.collection("Vaccine").where('startAge', isLessThanOrEqualTo: '${ageY}Y ${ageM}M');
-    // // print('me : $ageY , $ageM');
-    // vaccine.where('startAge', isLessThanOrEqualTo: '${ageY}Y ${ageM}M');
-    // vaccine.where('endAge', isGreaterThan: '1.6');
-    return StreamBuilder(
-      stream: vaccine
-          .where('startAge', isLessThanOrEqualTo: '0.1')
-          // .where('startAge', isLessThanOrEqualTo: '${ageY}.${ageM}')
-          .snapshots(),
-      builder: buildList,
-    );
-  }
-
-  Widget buildList(
-      BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
-    if (snapshot.hasData) {
-      print('has');
-      return ListView.builder(
-          shrinkWrap: true,
-          itemCount: snapshot.data.docs.length,
-          itemBuilder: (context, index) {
-            DocumentSnapshot user = snapshot.data.docs[index];
-            // var end = user.get('endAge');
-            // var cut = end.split('.');
-            // int endY = int.parse(cut[0]);
-            // int endM = int.parse(cut[1]);
-            // double w = double.parse(end);
-            // double a = double.parse('${ageY}.$ageM');
-
-            // print(w);
-            // if (endY > ageY || (endY == ageY && endM > ageM)) {
-            // if (w > a) {
-            //   print('$ageY kgg $endY');
-            //   // buttonVaccine(
-            //   //   user.get('key'),
-            //   //   user.get('name'),
-            //   // );
-            //    return buttonVaccine(
-            //   user.get('key'),
-            //   user.get('name'),
-            // );
-            // }
-            return buttonVaccine(
-              user.get('key'),
-              user.get('name'),
-            );
-          }
-          // }
-          );
-    }
-    return Text('No Data');
-  }
-  // var data = new ReadInfo();
-
-  Future<void> readData() async {
-    getUser();
-    DocumentSnapshot info = await FirebaseFirestore.instance
-        .collection('baby_profile')
-        .doc(userID)
-        .get();
-    setState(() {
-      ageY = info.get('ageY');
-      ageM = info.get('ageM');
-      ageD = info.get('ageD');
-      nickname = info.get('nickname');
+  Future<void> getHistory() async {
+    String userID = Account.userID;
+    await FirebaseFirestore.instance
+        .collection('/baby_profile/$userID/vaccine_record')
+        .orderBy("time", descending: true)
+        .snapshots()
+        .listen((event) {
+      List<QueryDocumentSnapshot> snapshot2 = event.docs;
+      if (snapshot2.isNotEmpty) {
+        for (var snap in snapshot2) {
+          setState(() {
+            // importent
+            Map<String, dynamic> map = snap.data();
+            HistoryVac model = HistoryVac.fromMap(map);
+            hisvac.add(model);
+            BabyInfo.histID.add(snap["id"]);
+          });
+        }
+        BabyInfo.vacHist = hisvac;
+        // print("Have BABY HIST : ${BabyInfo.vacHist.toSet()}");
+      } else {
+        print('No History');
+      }
     });
   }
 
-  Future<void> getUser() async {
-    FirebaseAuth firebaseAuth = FirebaseAuth.instance;
-    var user = firebaseAuth.currentUser;
-    ;
-    userID = user.uid;
+  Future<void> readData() async {
+    print('Mark historyID : ${BabyInfo.histID.toSet()}');
+    await FirebaseFirestore.instance
+        .collection('/vac02/${BabyInfo.ageRange}/vac')
+        .snapshots()
+        .listen((event) {
+       List<QueryDocumentSnapshot> snapshot2 = event.docs;
+      if (snapshot2.isNotEmpty) {
+        for (var snap in snapshot2) {
+          Map<String, dynamic> map = snap.data();
+          map["id"] = snap.id;
+          VaccineList model = VaccineList.fromMap(map);
+          // print(model);
+          setState(() {
+            // importent
+            vacList.add(model);
+          });
+        }
+      } else {
+        print('No Vaccine');
+                readData();
+
+      }
+    });
   }
 
-  Widget HeadInfo() {
+  Widget buildList() {
+      HistoryVac filtered;
+    return ListView.builder(
+      itemCount: vacList.length,
+      itemBuilder: (context, index) {
+        String id = vacList[index].id;
+        // find histoy in ths vaccine
+        // print("thhhhh : ${BabyInfo.vacHist}");
+        if (BabyInfo.vacHist != null) {
+          var filter =
+              BabyInfo.vacHist.where((content) => content.id == id).toList();
+          filtered = filter.asMap()[0];
+        }
+        // print('His This INDEX = ${filtered}');
+        return Container(
+          padding: EdgeInsets.only(top: 15, left: 50, right: 50),
+          child: buttonVaccine(index, filtered),
+        );
+      },
+    );
+  }
+
+  Widget headInfo() {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.only(
-        // top: 150,
         top: 130,
       ),
       child: Column(
         children: [
           ImageProfile(
             size: 100.0,
+            color: orangeButtonColor2,
           ),
           SizedBox(
             height: 5,
           ),
           Container(
             color: white,
-            // padding: EdgeInsets.all(15),
             width: double.infinity,
             child: Column(
               children: [
@@ -138,24 +142,14 @@ class _VaccineState extends State<Vaccine> {
                   height: 5,
                 ),
                 Text(
-                  nickname,
+                  BabyInfo.nickname,
                   style: TextStyle(
                       color: Colors.grey.shade800, fontFamily: 'Bold'),
                 ),
                 SizedBox(
                   height: 5,
                 ),
-                (ageY == 0 && ageM == 0 && ageD == 0)
-                    ? Text('แรกเกิด')
-                    : Text('${ageY} ปี ${ageM} เดือน'),
-                // Text((() {
-                //   if (ageY==0 && ageM==0 && ageD==0) {
-                //     return 'แรกเกิด';
-                //   }else{
-                //      return 'สำหรับช่วงอายุ ${ageY} ปี ${ageM} เดือน';
-                //   }
-                // })()),
-                // 'สำหรับช่วงอายุ ${ageY} ปี ${ageM} เดือน'
+                Text(BabyInfo().findAge()),
                 SizedBox(
                   height: 15,
                 ),
@@ -167,61 +161,9 @@ class _VaccineState extends State<Vaccine> {
     );
   }
 
-  Widget addOtherVaccine() {
-    // return Container(
-    //   padding: EdgeInsets.only(top: 50),
-    //   width: 50,
-    //   height: 50,
-    //   child: RaisedButton(
-    //     padding: EdgeInsets.zero,
-    //     shape: CircleBorder(),
-    //     color: Colors.black,
-    //     onPressed: () {},
-    //     child: Icon(
-    //       Icons.add_rounded,
-    //       color: greenbeam,
-    //       size: 40,
-    //     ),
-    //   ),
-    // );
-    return Container(
-      width: 60,
-      height: 60,
-      child: RaisedButton(
-        padding: EdgeInsets.zero,
-        // padding: EdgeInsets.only(top: 10, bottom: 10, left: 15, right: 15),
-        shape: CircleBorder(),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => VaccinHistory()),
-          );
-        },
-        color: white,
-        // shape: RoundedRectangleBorder(
-        //   borderRadius: BorderRadius.only(
-        //     topLeft: Radius.circular(15),
-        //     bottomLeft: Radius.circular(15),
-        //   ),
-        // ),
-        child: Icon(
-          Icons.add_rounded,
-          color: greenbeam,
-          size: 40,
-        ),
-      ),
-    );
-  }
-
   Widget vaccineHistory() {
     return RaisedButton(
       padding: EdgeInsets.only(top: 10, bottom: 10, left: 15, right: 15),
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => VaccinHistory()),
-        );
-      },
       color: orangeButtonColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
@@ -230,48 +172,24 @@ class _VaccineState extends State<Vaccine> {
         ),
       ),
       child: Text(
-        'ประวัติการรับวัคซีน',
+        'ประวัติการรัซีน',
         style: TextStyle(
           color: Colors.grey[800],
         ),
       ),
-    );
-  }
-
-  Widget buttonVaccine(String key, String name) {
-    print('CreateB');
-    return Container(
-      padding: EdgeInsets.only(top: 15, left: 50, right: 50),
-      child: RaisedButton(
-        padding: EdgeInsets.all(20),
-        onPressed: () {},
-        color: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            Container(
-              width: 40,
-              alignment: Alignment.center,
-              child: Text(key),
-            ),
-            SizedBox(
-              width: 20,
-            ),
-            Container(
-              width: 190,
-              child: Text(name),
-            ),
-          ],
-        ),
-      ),
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => VaccinHistory()),
+        );
+      },
     );
   }
 
   Widget contentVaccine() {
     return Container(
-// color: bluePastel,
-      padding: EdgeInsets.only(top: 100),
+// color: bluePastels,
+      padding: EdgeInsets.only(top: 110),
       width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -283,10 +201,10 @@ class _VaccineState extends State<Vaccine> {
       child: Column(
         children: [
           Flexible(
-            child: vaccineList(),
+            child: buildList(),
           ),
           SizedBox(
-            height: 20,
+            height: 0,
           ),
           addOtherVaccine(),
         ],
@@ -294,42 +212,172 @@ class _VaccineState extends State<Vaccine> {
     );
   }
 
+  Widget buttonVaccine(int index, HistoryVac hist) {
+    return RaisedButton(
+      padding: EdgeInsets.all(20),
+      color: BabyInfo.histID.contains(vacList[index].id) ? bage : white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Container(
+            width: 43,
+            alignment: Alignment.center,
+            child: Text(vacList[index].key),
+          ),
+          SizedBox(
+            width: 19,
+          ),
+          Container(
+            width: 190,
+            child: Text(vacList[index].name),
+          ),
+        ],
+      ),
+      onPressed: () {
+        showGeneralDialog(
+          // barrierDismissible: true, //กดบริเวณอื่นให้ออก
+          context: context,
+          pageBuilder: (context, _, __) {
+            return ModalVaccine(
+                colorbuttom: white,
+                colormodal: primary,
+                vacList: vacList[index],
+                histList: hist);
+          },
+          transitionBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOut,
+              ).drive(Tween<Offset>(
+                begin: Offset(0, -1.0),
+                end: Offset.zero,
+              )),
+              child: child,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget addOtherVaccine() {
+    return Container(
+        width: 60,
+        height: 60,
+        margin: EdgeInsets.only(bottom: 45),
+        child: RaisedButton(
+          padding: EdgeInsets.zero,
+          shape: CircleBorder(),
+          color: orangeButtonColor2,
+          child: Icon(
+            Icons.add_rounded,
+            color: white,
+            size: 40,
+          ),
+          onPressed: () {
+            showGeneralDialog(
+                // barrierDismissible: true, //กดบริเวณอื่นให้ออก
+                context: context,
+                pageBuilder: (context, _, __) {
+                  return ModaladdOtherVacc(
+                    colormodal: primary,
+                  );
+                },
+                transitionBuilder:
+                    (context, animation, secondaryAnimation, child) {
+                  return SlideTransition(
+                    position: CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOut,
+                    ).drive(Tween<Offset>(
+                      begin: Offset(0, -1.0),
+                      end: Offset.zero,
+                    )),
+                    child: child,
+                  );
+                });
+          },
+        ),);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
+      key: _scaffoldKey,
       backgroundColor: Colors.white,
       body: SizedBox(
         height: 825,
         child: Stack(
           children: [
             Container(
-              // height: 300,
               alignment: Alignment.topCenter,
               width: double.infinity,
-              color: purpleBackGroundColor,
+              color: grayBackGroundColor,
               padding: EdgeInsets.only(top: 80),
-              child: Mystyle().TextButtonHeadbar('Vaccine'),
+              child: Mystyle().textButtonHeadbar('วัคซีน'),
             ),
             Positioned.fill(
               top: 200,
               child: contentVaccine(),
             ),
-            HeadInfo(),
+            headInfo(),
             Container(
               padding: EdgeInsets.only(bottom: 5),
               alignment: Alignment.bottomRight,
-              child: vaccineHistory(),
             ),
-            // BackButton(),
-            BackButtonBeam(background: purpleBackGroundColor),
-            // modalFormTop(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                SafeArea(
+                  child: Container(
+                    margin: EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: primaryButton,
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.arrow_back_ios_rounded,
+                        color: orangeButtonColor,
+                      ),
+                      onPressed: () {
+                        // Navigator.pop(context);
+                        Navigator.push(context,
+                            MaterialPageRoute(builder: (context) => Home()));
+                      },
+                    ),
+                  ),
+                ),
+                SafeArea(
+                  child: Container(
+                    margin: EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: primaryButton,
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.bookmark,
+                        color: orangeButtonColor,
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => VaccinHistory()));
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            )
           ],
         ),
       ),
-      bottomNavigationBar: BottonNavBar(
-        titleBottomNavBar: 'Home',
-        context: context,
-      ),
+      drawer: SideBar(),
     );
   }
 }
